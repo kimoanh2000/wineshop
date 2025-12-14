@@ -1,9 +1,8 @@
 FROM php:8.2-cli
 
-# Set working directory
-WORKDIR /app
+WORKDIR /var/www/html
 
-# Install system dependencies
+# Install system packages
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -16,14 +15,13 @@ RUN apt-get update && apt-get install -y \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy source code
-COPY . /app
+# Copy project
+COPY . /var/www/html
 
-# Install Laravel dependencies
+# Install dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Expose port
 EXPOSE 80
 
-# Start Laravel server
+# Run Laravel
 CMD php artisan serve --host=0.0.0.0 --port=80
