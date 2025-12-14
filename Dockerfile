@@ -1,31 +1,29 @@
-FROM php:8.2-apache
-
-# Enable Apache rewrite
-RUN a2enmod rewrite
+FROM php:8.2-cli
 
 # Set working directory
-WORKDIR /var/www/html
+WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
     libzip-dev \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
     && docker-php-ext-install pdo pdo_mysql zip
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Copy source code
-COPY . /var/www/html
+COPY . /app
 
-# Set Apache document root to /public
-ENV APACHE_DOCUMENT_ROOT /var/www/html/public
-RUN sed -ri 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+# Install Laravel dependencies
+RUN composer install --no-dev --optimize-autoloader
 
-# Permissions
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html
-
+# Expose port
 EXPOSE 80
+
+# Start Laravel server
+CMD php artisan serve --host=0.0.0.0 --port=80
