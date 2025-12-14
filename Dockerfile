@@ -1,27 +1,33 @@
-FROM php:8.2-cli
+FROM php:8.2-apache
 
-WORKDIR /var/www/html
-
-# Install system packages
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
     libzip-dev \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    && docker-php-ext-install pdo pdo_mysql zip
+    && docker-php-ext-install zip pdo pdo_mysql
 
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Enable Apache rewrite
+RUN a2enmod rewrite
 
-# Copy project
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy source code
 COPY . /var/www/html
 
-# Install dependencies
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-EXPOSE 80
+# Set permissions
+RUN chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
 
-# Run Laravel
-CMD php artisan serve --host=0.0.0.0 --port=80
+# Apache config
+RUN sed -i 's|/var/www/html|/var/www/html/public|g' \
+    /etc/apache2/sites-available/000-default.conf
+
+EXPOSE 80
